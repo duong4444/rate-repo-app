@@ -5,7 +5,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text>Hello World on mobile</Text>
-      <Text>Google Pixel 4A</Text>
+      <Text>Google Pixel 4A !</Text>
       <StatusBar style="auto" />
     </View>
   );
