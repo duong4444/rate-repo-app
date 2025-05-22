@@ -1,68 +1,185 @@
-import { FlatList, View, StyleSheet } from "react-native";
+import { FlatList, View, StyleSheet, Pressable, Text } from "react-native";
 import RepoItem from "./RepositoryItem";
+import useRepositories from "../hooks/useRepositories";
+import useSearchRepo from "../hooks/useSearchRepo";
+import { useParams } from "react-router-native";
+import { useNavigate } from "react-router-native";
+import useDetailRepo from "../hooks/useDetailRepo";
+import { useState } from "react";
+import { Picker } from "@react-native-picker/picker";
+import { Searchbar } from "react-native-paper";
+import { useDebounce } from "use-debounce";
 const styles = StyleSheet.create({
   separator: {
     height: 10,
   },
+  container: {
+    height: 50,
+    backgroundColor: "white",
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  picker: {
+    height: 50,
+    width: "100%",
+  },
+  item: {
+    fontSize: 18,
+    marginVertical: 5,
+  },
+  searchBar: {
+    margin: 15,
+    borderRadius: 15,
+    backgroundColor: "#f0f0f0",
+  },
 });
 
-const repositories = [
-  {
-    id: "jaredpalmer.formik",
-    fullName: "jaredpalmer/formik",
-    description: "Build forms in React, without the tears",
-    language: "TypeScript",
-    forksCount: 1589,
-    stargazersCount: 21553,
-    ratingAverage: 88,
-    reviewCount: 4,
-    ownerAvatarUrl: "https://avatars2.githubusercontent.com/u/4060187?v=4",
-  },
-  {
-    id: "rails.rails",
-    fullName: "rails/rails",
-    description: "Ruby on Rails",
-    language: "Ruby",
-    forksCount: 18349,
-    stargazersCount: 45377,
-    ratingAverage: 100,
-    reviewCount: 2,
-    ownerAvatarUrl: "https://avatars1.githubusercontent.com/u/4223?v=4",
-  },
-  {
-    id: "django.django",
-    fullName: "django/django",
-    description: "The Web framework for perfectionists with deadlines.",
-    language: "Python",
-    forksCount: 21015,
-    stargazersCount: 48496,
-    ratingAverage: 73,
-    reviewCount: 5,
-    ownerAvatarUrl: "https://avatars2.githubusercontent.com/u/27804?v=4",
-  },
-  {
-    id: "reduxjs.redux",
-    fullName: "reduxjs/redux",
-    description: "Predictable state container for JavaScript apps",
-    language: "TypeScript",
-    forksCount: 13902,
-    stargazersCount: 52869,
-    ratingAverage: 0,
-    reviewCount: 0,
-    ownerAvatarUrl: "https://avatars3.githubusercontent.com/u/13142323?v=4",
-  },
-];
+export const RepoItemDetail = () => {
+  const { id } = useParams();
 
-const ItemSeparator = () => <View style={styles.separator} />;
-// gọi RepoItem trong renderItem
+  const { repository, loading } = useDetailRepo(id);
+  if (loading) {
+    return <Text>Loading ...</Text>;
+  }
+  if (!repository) {
+    return <Text>Repository not found!</Text>;
+  }
+
+  const item = {
+    id: repository.id,
+    fullName: repository.fullName,
+    description: repository.description,
+    language: repository.language,
+    forksCount: repository.forksCount,
+    stargazersCount: repository.stargazersCount,
+    ratingAverage: repository.ratingAverage,
+    reviewCount: repository.reviewCount,
+    ownerAvatarUrl: repository.ownerAvatarUrl,
+  };
+
+  return <RepoItem item={item} showDetail={true} github_url={repository.url} />;
+};
+
+export const ItemSeparator = () => <View style={styles.separator} />;
+
+export const SelectSortForRepo = ({ sortChoice, setSortChoice }) => {
+  return (
+    <View style={styles.container}>
+      <Picker
+        selectedValue={sortChoice}
+        onValueChange={(value) => setSortChoice(value)}
+        style={styles.picker}
+      >
+        <Picker.Item
+          label="Select an item..."
+          enabled={false}
+          style={{ color: "gray" }}
+        />
+        <Picker.Item label="Latest repositories" value="CREATED_AT_DESC" />
+        <Picker.Item
+          label="Highest rated repositories"
+          value="RATING_AVERAGE_DESC"
+        />
+        <Picker.Item
+          label="Lowest rated repositories"
+          value="RATING_AVERAGE_ASC"
+        />
+      </Picker>
+    </View>
+  );
+};
+
+const getOrderByAndDirection = (sortChoice) => {
+  switch (sortChoice) {
+    case "CREATED_AT_DESC":
+      return { orderBy: "CREATED_AT", orderDirection: "DESC" };
+    case "RATING_AVERAGE_DESC":
+      return { orderBy: "RATING_AVERAGE", orderDirection: "DESC" };
+    case "RATING_AVERAGE_ASC":
+      return { orderBy: "RATING_AVERAGE", orderDirection: "ASC" };
+    default:
+      return { orderBy: "CREATED_AT", orderDirection: "DESC" };
+  }
+};
+
 const RepositoryList = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+
+  const [sortChoice, setSortChoice] = useState("CREATED_AT_DESC");
+
+  const { repositories_from_search } = useSearchRepo(debouncedSearchQuery);
+
+  const { orderBy, orderDirection } = getOrderByAndDirection(sortChoice);
+
+  const { repositories, fetchMore } = useRepositories({
+    first: 4,
+    orderBy,
+    orderDirection,
+  });
+
+  const repositoryNodes = repositories
+    ? repositories.edges.map((edge) => edge.node)
+    : [];
+
+  const searchResults = repositories_from_search
+    ? repositories_from_search.edges.map((edge) => edge.node)
+    : [];
+
+  const navigate = useNavigate();
+
+  const displayData = debouncedSearchQuery ? searchResults : repositoryNodes;
+  const onEndReach = () => {
+    // if (
+    //   !debouncedSearchQuery ||
+    //   debouncedSearchQuery === "" ||
+    //   debouncedSearchQuery === undefined
+    // ) {
+    //   fetchMore();
+    //   console.log("you have reached the end of the list");
+    // }
+    if(debouncedSearchQuery){
+      return;
+    }else{
+      fetchMore();
+      console.log("you have reached the end of the list");
+    }
+  };
   return (
     <View style={{ flex: 1 }}>
       <FlatList
-        data={repositories}
+        data={displayData}
         ItemSeparatorComponent={ItemSeparator}
-        renderItem={({ item }) => <RepoItem item={item} />}
+        renderItem={({ item }) => (
+          <Pressable onPress={() => navigate(`/${item.id}`)}>
+            <RepoItem item={item} />
+          </Pressable>
+        )}
         keyExtractor={(item) => item.id}
+        onEndReached={onEndReach}
+        onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          <View style={{ flexDirection: "column" }}>
+            <Searchbar
+              placeholder="Search repository"
+              onChangeText={(query) => {
+                setSearchQuery(query);
+                console.log("Search query: ", query);
+              }}
+              value={searchQuery}
+              style={styles.searchBar}
+            />
+            {!debouncedSearchQuery && (
+              <SelectSortForRepo
+                sortChoice={sortChoice}
+                setSortChoice={setSortChoice}
+              />
+            )}
+          </View>
+        }
       />
     </View>
   );

@@ -10,7 +10,7 @@ const theme = {
         ios: "blue",
         default: "green"
       }), 
-    mainBackground: "#e1e4e8"  // hồng nhạt
+    mainBackground: "black"  // 
   },
   fontSizes: {
     body: 14,

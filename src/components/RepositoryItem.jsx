@@ -1,4 +1,12 @@
-import { Image, StyleSheet, View } from "react-native";
+/* eslint-disable no-unused-vars */
+import {
+  Image,
+  StyleSheet,
+  View,
+  Button,
+  Alert,
+} from "react-native";
+import * as Linking from "expo-linking";
 import Text from "./Text";
 import theme from "../theme";
 const styles = StyleSheet.create({
@@ -7,19 +15,27 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-around",
     marginBottom: 10,
-    backgroundColor: "green",
+    // backgroundColor: "green",
   },
   container_column: {
     flex: 1, // fill nốt phần trống của cpn cha
     flexDirection: "column",
     padding: 10,
-    backgroundColor: "yellow",
+    // backgroundColor: "yellow",
   },
   container: {
     flex: 1,
     flexDirection: "column",
     padding: 10,
-    backgroundColor: "#64a4d3",
+    backgroundColor: "pink", // xanh dương nhạt
+  },
+  container_detail: {
+    flexDirection: "column",
+    padding: 10,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10
   },
   logo: {
     width: 50,
@@ -40,7 +56,7 @@ const styles = StyleSheet.create({
   stats: {
     alignItems: "center",
     margin: 5,
-    backgroundColor: "purple",
+    // backgroundColor: "purple",
   },
 });
 
@@ -58,15 +74,32 @@ const DisplayAnImage = ({ url_avatar }) => (
 const formatDisplayedNumber = (number) => {
   if (number >= 1000) {
     const inputNumber = number / 1000;
-    return Math.round(inputNumber * 10) / 10 + "k"
+    return Math.round(inputNumber * 10) / 10 + "k";
   } else {
     return number;
   }
 };
+//tạo view hiển thị repo đơn chứa info giống reviewed repo+btn "Open in Github"
+// query Repository($repositoryId: ID!) {
+//   repository(id: $repositoryId) {
+//     id
+//     url
+//     fullName
+//   }
+// }
+// dùng expo linking để mở URL trong browser
+// cụ thể Linking.openURL
+// view cho repo đơn sẽ có route path riêng
+// repo id trong route path như là path parameter, có thể access = useParams
+// press vào repo trong reviewed repo sẽ navigate đến repo đơn
+// bọc RepoItem bằng Pressable và dùng navigate để change route trong onPress
 
-const RepoItem = ({ item }) => {
+const RepoItem = ({ item, showDetail,github_url }) => {
   return (
-    <View style={styles.container}>
+    <View
+      testID="repoItem"
+      style={showDetail ? styles.container_detail : styles.container}
+    >
       <View style={styles.container_row}>
         <DisplayAnImage url_avatar={item.ownerAvatarUrl} />
         <View style={styles.container_column}>
@@ -103,6 +136,14 @@ const RepoItem = ({ item }) => {
           <Text>Rating</Text>
         </View>
       </View>
+      {showDetail && (
+        <View>
+          <Button
+            title="Open in Github"
+            onPress={() => Linking.openURL(`${github_url}`)}
+          />
+        </View>
+      )}
     </View>
   );
 };
